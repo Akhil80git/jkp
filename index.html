@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Free Accurate Location Finder</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 20px;
+    }
+    #location {
+      margin-top: 15px;
+      font-size: 16px;
+      color: green;
+      white-space: pre-line;
+    }
+    #map {
+      width: 100%;
+      height: 400px;
+      margin-top: 20px;
+      border: 2px solid #333;
+      border-radius: 10px;
+    }
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 8px;
+      background: #007bff;
+      color: white;
+      border: none;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <h2>📍 Free Accurate GPS + Full Address</h2>
+  <button onclick="getLocation()">Get My Exact Location</button>
+  <div id="location"></div>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    let map, marker;
+
+    function initMap(lat, lon) {
+      if (!map) {
+        map = L.map("map").setView([lat, lon], 16);
+
+        // Free OpenStreetMap tiles
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "© OpenStreetMap contributors",
+        }).addTo(map);
+
+        marker = L.marker([lat, lon]).addTo(map)
+          .bindPopup("📍 You are here")
+          .openPopup();
+      } else {
+        map.setView([lat, lon], 16);
+        marker.setLatLng([lat, lon]);
+      }
+    }
+
+    async function getLocation() {
+      let locDiv = document.getElementById("location");
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            let lat = pos.coords.latitude;
+            let lon = pos.coords.longitude;
+            let accuracy = pos.coords.accuracy;
+
+            locDiv.innerHTML = `Latitude: ${lat}
+Longitude: ${lon}
+Accuracy: ±${accuracy} meters
+
+Fetching address...`;
+
+            try {
+              // Free reverse geocoding from OpenStreetMap
+              let response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
+              );
+              let data = await response.json();
+
+              let address = data.display_name;
+              locDiv.innerHTML = `✅ Address:\n${address}\n\n(Accuracy: ±${accuracy} meters)`;
+
+              initMap(lat, lon);
+            } catch (err) {
+              locDiv.innerHTML += "\n❌ Error fetching address.";
+            }
+          },
+          (err) => {
+            locDiv.innerHTML = "❌ Error: " + err.message;
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      } else {
+        locDiv.innerHTML = "❌ Geolocation not supported.";
+      }
+    }
+  </script>
+</body>
+</html>
